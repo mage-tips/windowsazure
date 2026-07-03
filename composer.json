@@ -1,0 +1,37 @@
+{
+    "name": "magetips/windowsazure",
+    "description": "PHP client for Azure Service Bus. Manages namespace topology (create/list/delete topics, queues, subscriptions, and rules) and message operations (send, peek-lock receive, unlock, renew lock, delete) over the Service Bus REST API, authenticating via Shared Access Signature (SAS).",
+    "keywords": ["php", "azure", "sdk", "servicebus", "message-queue"],
+    "license": "Apache-2.0",
+    "type": "library",
+    "authors": [
+        {
+            "name": "Azure PHP SDK",
+            "email": "azurephpsdk@microsoft.com"
+        },
+        {
+            "name": "Muhammad Umar",
+            "email": "umarshiekh619@gmail.com"
+        }
+    ],
+    "require": {
+        "php": "^7.3 || ^8.0",
+        "pear/net_url2": "^2.2",
+        "guzzlehttp/guzzle": "^6.5 || ^7.0",
+        "psr/http-message": "^1.0 || ^2.0"
+    },
+    "require-dev": {
+        "phpunit/phpunit": "^9.5 || ^10.0 || ^11.0 || ^12.0",
+        "guzzlehttp/psr7": "^1.7 || ^2.0"
+    },
+    "autoload": {
+        "psr-4": {
+            "MageTips\\WindowsAzure\\": "src/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "MageTips\\WindowsAzure\\Test\\": "tests/"
+        }
+    }
+}
