@@ -26,6 +26,7 @@
 namespace MageTips\WindowsAzure\Common\Internal\Http;
 
 use GuzzleHttp\Client;
+use GuzzleHttp\ClientInterface;
 use GuzzleHttp\Exception\ClientException;
 use GuzzleHttp\Psr7\Request;
 use MageTips\WindowsAzure\Common\Internal\Resources;
@@ -73,9 +74,17 @@ class HttpClient implements IHttpClient
     private $_requestUrl;
 
     /**
+     * setConfig()/getConfig() read/write this as a plain key-value store for
+     * IHttpClient interface compatibility. Never passed to Guzzle: the values
+     * this constructor used to put here (Resources::SSL_VERIFY_PEER etc.) are
+     * snake_case keys from an older, pre-Guzzle HTTP client this SDK no longer
+     * uses, not real Guzzle client options - Guzzle silently ignores unknown
+     * config keys, so passing this array to `new Client()` was never doing
+     * anything to begin with.
+     *
      * @var array
      */
-    private $_config;
+    private $_config = [];
 
     /**
      * Holds expected status code after sending the request.
@@ -85,30 +94,34 @@ class HttpClient implements IHttpClient
     private $_expectedStatusCodes;
 
     /**
+     * Reused across every send() on this instance (and, via ServicesBuilder,
+     * across every HttpClient for the life of the process) so repeated calls
+     * reuse an already-open HTTPS connection instead of paying a fresh
+     * DNS+TCP+TLS handshake every time.
+     *
+     * @var ClientInterface
+     */
+    private $_guzzleClient;
+
+    /**
      * Initializes new HttpClient object.
      *
      * @param string $certificatePath          The certificate path
      * @param string $certificateAuthorityPath The path of the certificate authority
+     * @param ClientInterface|null $httpClient  Shared Guzzle client; a new one is
+     *                                          created if not provided. Appended
+     *                                          as the last parameter to preserve
+     *                                          the original positional signature.
      */
     public function __construct(
         $certificatePath = Resources::EMPTY_STRING,
-        $certificateAuthorityPath = Resources::EMPTY_STRING
+        $certificateAuthorityPath = Resources::EMPTY_STRING,
+        ?ClientInterface $httpClient = null
     ) {
-        $this->_config = [
-            Resources::USE_BRACKETS => true,
-            Resources::SSL_VERIFY_PEER => false,
-            Resources::SSL_VERIFY_HOST => false,
-        ];
+        $this->_guzzleClient = $httpClient ?? new Client();
 
         if (!empty($certificatePath)) {
-            $this->_config[Resources::SSL_LOCAL_CERT] = $certificatePath;
-            $this->_config[Resources::SSL_VERIFY_HOST] = true;
             $this->_requestOptions[RequestOptions::CERT] = $certificatePath;
-        }
-
-        if (!empty($certificateAuthorityPath)) {
-            $this->_config[Resources::SSL_CAFILE] = $certificateAuthorityPath;
-            $this->_config[Resources::SSL_VERIFY_PEER] = true;
         }
 
         // Replace User-Agent.
@@ -250,7 +263,7 @@ class HttpClient implements IHttpClient
             $filter->handleRequest($this);
         }
 
-        $client = new Client($this->_config);
+        $client = $this->_guzzleClient;
 
         // send request and recieve a response
         $response = null;

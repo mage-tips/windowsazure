@@ -25,6 +25,8 @@
 
 namespace MageTips\WindowsAzure\Common;
 
+use GuzzleHttp\Client;
+use GuzzleHttp\ClientInterface;
 use MageTips\WindowsAzure\Common\Internal\Http\IHttpClient;
 use MageTips\WindowsAzure\Common\Internal\Resources;
 use MageTips\WindowsAzure\Common\Internal\Serialization\ISerializer;
@@ -46,13 +48,35 @@ class ServicesBuilder
     private static $_instance = null;
 
     /**
+     * Shared across every HttpClient this builder creates, for the life of the
+     * process - Guzzle's own connection pool keys by destination host, so reusing
+     * one Client across different Azure namespaces/topics is safe, and avoids a
+     * fresh DNS+TCP+TLS handshake on every single REST call.
+     *
+     * @var ClientInterface
+     */
+    private $_guzzleClient;
+
+    /**
+     * @return ClientInterface
+     */
+    protected function guzzleClient()
+    {
+        if (!isset($this->_guzzleClient)) {
+            $this->_guzzleClient = new Client();
+        }
+
+        return $this->_guzzleClient;
+    }
+
+    /**
      * Gets the HTTP client used in the REST services construction.
      *
      * @return IHttpClient
      */
     protected function httpClient()
     {
-        return new HttpClient();
+        return new HttpClient('', '', $this->guzzleClient());
     }
 
     /**
